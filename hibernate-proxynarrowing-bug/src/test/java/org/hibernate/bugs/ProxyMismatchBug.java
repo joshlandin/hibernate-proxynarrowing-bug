@@ -112,7 +112,7 @@ public class ProxyMismatchBug extends BaseCoreFunctionalTestCase {
 
 
   @Test
-  public void hhh123Test() throws Exception {
+  public void testHHH11280() throws Exception {
       // BaseCoreFunctionalTestCase automatically creates the SessionFactory and provides the Session.
       Session s = openSession();
       Transaction tx = s.beginTransaction();

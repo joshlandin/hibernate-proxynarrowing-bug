@@ -20,7 +20,6 @@ import java.util.List;
 import junit.framework.Assert;
 
 import org.hibernate.Session;
-import org.hibernate.Transaction;
 import org.hibernate.Version;
 import org.hibernate.bugs.model.AdvancedUser;
 import org.hibernate.bugs.model.AdvancedUserDetail;
@@ -35,13 +34,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * This template demonstrates how to develop a test case for Hibernate ORM, using its built-in unit test framework.
- * Although ORMStandaloneTestCase is perfectly acceptable as a reproducer, usage of this class is much preferred.
- * Since we nearly always include a regression test with bug fixes, providing your reproducer using this method
- * simplifies the process.
- *
- * What's even better?  Fork hibernate-orm itself, add your test case directly to a module's unit tests, then
- * submit it as a PR!
+ * Test for HHH11280 - Proxy Narrowing (HHH-9071) breaks polymorphic query.
  * 
  * @jlandin
  */
@@ -74,13 +67,11 @@ public class ProxyMismatchBug extends BaseCoreFunctionalTestCase {
       configuration.setProperty( AvailableSettings.SHOW_SQL, Boolean.TRUE.toString() );
       configuration.setProperty( AvailableSettings.FORMAT_SQL, Boolean.TRUE.toString() );
       
-      /*
       configuration.setProperty( AvailableSettings.DIALECT, "org.hibernate.dialect.MySQL5Dialect" );
       configuration.setProperty( AvailableSettings.DRIVER, "com.mysql.jdbc.Driver");
       configuration.setProperty( AvailableSettings.URL, "jdbc:mysql://localhost:3306/hib-test");
       configuration.setProperty( AvailableSettings.USER, "hib");
       configuration.setProperty( AvailableSettings.PASS, "hib");
-      */
   }
   
   @Before
@@ -113,35 +104,36 @@ public class ProxyMismatchBug extends BaseCoreFunctionalTestCase {
 
   @Test
   public void testHHH11280() throws Exception {
-      // BaseCoreFunctionalTestCase automatically creates the SessionFactory and provides the Session.
       Session s = openSession();
-      Transaction tx = s.beginTransaction();
       
-      {
-        DetachedCriteria criteria = DetachedCriteria.forClass(UserConfig.class);
-        criteria.add(Restrictions.eq("id", new Long(10)));
-        final List<UserConfig> rows = criteria.getExecutableCriteria(s).list();
-        UserConfig config = rows.get(0);
-        User u = config.getUser();
-        Assert.assertNotNull(u);
-      }
+      DetachedCriteria configCriteria = DetachedCriteria.forClass(UserConfig.class);
+      configCriteria.add(Restrictions.eq("id", new Long(10)));
+      final List<UserConfig> configRows = configCriteria.getExecutableCriteria(s).list();
+      UserConfig config = configRows.get(0);
+      User configUser = config.getUser();
+      Assert.assertNotNull(configUser);
+      
+      // Evicting the proxy instance from the session cache would 
+      // let the test pass, but this is not a practical solution in 
+      // real applications.
+      // --
+      // s.evict(u); 
 
       try
       {
-        DetachedCriteria criteria = DetachedCriteria.forClass(User.class);
-        criteria.add(Restrictions.eq("id", new Long(11)));
-        final List<User> rows = criteria.getExecutableCriteria(s).list();
-        User u = rows.get(0);
-        Assert.assertEquals(106, u.getType().intValue());
-        AdvancedUser a = (AdvancedUser)u;
-        Assert.assertNotNull(a);
+        DetachedCriteria userCriteria = DetachedCriteria.forClass(User.class);
+        userCriteria.add(Restrictions.eq("id", new Long(11)));
+        final List<User> userRows = userCriteria.getExecutableCriteria(s).list();
+        User user = userRows.get(0);
+        Assert.assertEquals(106, user.getType().intValue());
+        AdvancedUser advancedUser = (AdvancedUser)user;
+        Assert.assertNotNull(advancedUser);
       }
       catch(ClassCastException e)
       {
         Assert.fail(String.format("The User proxy is not an AdvancedUser instance but should be (HHH-9071). Hibernate version detected as '%s'. %s", Version.getVersionString(), e.getMessage()));
       }
 
-      tx.commit();
       s.close();
   }
 

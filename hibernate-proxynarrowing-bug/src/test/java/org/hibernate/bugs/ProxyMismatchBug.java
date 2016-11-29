@@ -67,11 +67,13 @@ public class ProxyMismatchBug extends BaseCoreFunctionalTestCase {
       configuration.setProperty( AvailableSettings.SHOW_SQL, Boolean.TRUE.toString() );
       configuration.setProperty( AvailableSettings.FORMAT_SQL, Boolean.TRUE.toString() );
       
+      /*
       configuration.setProperty( AvailableSettings.DIALECT, "org.hibernate.dialect.MySQL5Dialect" );
       configuration.setProperty( AvailableSettings.DRIVER, "com.mysql.jdbc.Driver");
       configuration.setProperty( AvailableSettings.URL, "jdbc:mysql://localhost:3306/hib-test");
       configuration.setProperty( AvailableSettings.USER, "hib");
       configuration.setProperty( AvailableSettings.PASS, "hib");
+      */
   }
   
   @Before
